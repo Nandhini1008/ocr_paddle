@@ -64,9 +64,40 @@ class VectorDB:
         
         text = '\n'.join(filtered_lines)
 
-        # Simple chunking strategy: split by paragraphs or fixed size
-        # For now, let's split by paragraphs (double newline)
-        chunks = [c.strip() for c in text.split('\n\n') if c.strip()]
+        # Advanced chunking strategy: Recursive Character Split with Overlap
+        # This is better for RAG as it preserves context across boundaries
+        chunk_size = 1000
+        chunk_overlap = 200
+        
+        chunks = []
+        start = 0
+        text_len = len(text)
+        
+        while start < text_len:
+            end = start + chunk_size
+            
+            # If we are not at the end, try to find a natural break point (newline or space)
+            if end < text_len:
+                # Look for the last newline in the overlap zone
+                last_newline = text.rfind('\n', start, end)
+                if last_newline != -1 and last_newline > start + chunk_size // 2:
+                    end = last_newline + 1
+                else:
+                    # If no newline, look for the last space
+                    last_space = text.rfind(' ', start, end)
+                    if last_space != -1 and last_space > start + chunk_size // 2:
+                        end = last_space + 1
+            
+            chunk = text[start:end].strip()
+            if chunk:
+                chunks.append(chunk)
+            
+            # Move start forward, but keep overlap
+            start = end - chunk_overlap
+            
+            # Ensure we always move forward to avoid infinite loops
+            if start >= end:
+                start = end
         
         points = []
         for chunk in chunks:
