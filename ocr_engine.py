@@ -2,12 +2,14 @@ import os
 import sys
 from ocr_pdf_pipeline import process_pdf
 
-def extract_text(file_path: str) -> str:
+def extract_text(file_path: str, detector=None, ocr=None) -> str:
     """
     Extracts text from a PDF or Image file using the existing OCR pipeline.
     
     Args:
         file_path (str): Path to the input file.
+        detector: Optional pre-initialized CRAFTDetector
+        ocr: Optional pre-initialized PaddleOCR
         
     Returns:
         str: The extracted text.
@@ -19,7 +21,7 @@ def extract_text(file_path: str) -> str:
         # Use the existing process_pdf function
         # It returns a dictionary with pages and text
         try:
-            result = process_pdf(file_path, use_ocr=True)
+            result = process_pdf(file_path, use_ocr=True, detector=detector, ocr=ocr)
             full_text = ""
             for page in result.get('pages', []):
                 # Check if 'text' key exists (PyPDF2 path) or 'detections' (OCR path)
@@ -48,8 +50,10 @@ def extract_text(file_path: str) -> str:
         import cv2
         import numpy as np
         
-        detector = CRAFTDetector()
-        ocr = PaddleOCR(use_angle_cls=True, lang='en', rec_batch_num=1)
+        if detector is None:
+            detector = CRAFTDetector()
+        if ocr is None:
+            ocr = PaddleOCR(use_angle_cls=True, lang='en', rec_batch_num=1)
         
         image = cv2.imread(file_path)
         if image is None:

@@ -3,13 +3,13 @@ import config
 from vector_store import VectorDB
 
 class RAGChatbot:
-    def __init__(self):
+    def __init__(self, vector_db=None):
         if not config.GEMINI_API_KEY:
             raise ValueError("GEMINI_API_KEY not found in environment variables.")
             
         genai.configure(api_key=config.GEMINI_API_KEY)
         self.model = genai.GenerativeModel(config.LLM_MODEL_NAME)
-        self.vector_db = VectorDB()
+        self.vector_db = vector_db if vector_db else VectorDB()
 
     def query(self, user_query):
         # 1. Retrieve relevant chunks (reduced to top 2)

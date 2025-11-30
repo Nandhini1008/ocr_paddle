@@ -9,12 +9,31 @@ import docx
 # Page config
 st.set_page_config(page_title="RAG Chatbot with OCR", page_icon="🤖", layout="wide")
 
+# Initialize resources with caching
+@st.cache_resource
+def get_vector_db():
+    return VectorDB()
+
+@st.cache_resource
+def get_chatbot(_vector_db):
+    return RAGChatbot(vector_db=_vector_db)
+
+@st.cache_resource
+def get_ocr_components():
+    from ocr_pdf_pipeline import CRAFTDetector
+    from paddleocr import PaddleOCR
+    detector = CRAFTDetector()
+    ocr = PaddleOCR(use_angle_cls=True, lang='en', rec_batch_num=1)
+    return detector, ocr
+
 # Initialize session state for components
 if 'vector_db' not in st.session_state:
     try:
-        st.session_state.vector_db = VectorDB()
-        st.session_state.chatbot = RAGChatbot()
-        st.session_state.system_ready = True
+        with st.spinner("Initializing system... (this may take a minute)"):
+            st.session_state.vector_db = get_vector_db()
+            st.session_state.chatbot = get_chatbot(st.session_state.vector_db)
+            st.session_state.detector, st.session_state.ocr = get_ocr_components()
+            st.session_state.system_ready = True
     except Exception as e:
         st.error(f"Failed to initialize system: {e}")
         st.session_state.system_ready = False
@@ -38,7 +57,11 @@ def process_uploaded_file(uploaded_file):
         # Extract text
         if ext in ['.pdf', '.png', '.jpg', '.jpeg', '.bmp', '.tiff']:
             with st.spinner(f"Running OCR on {filename}..."):
-                text = extract_text(tmp_path)
+                text = extract_text(
+                    tmp_path, 
+                    detector=st.session_state.get('detector'), 
+                    ocr=st.session_state.get('ocr')
+                )
         elif ext == '.docx':
             doc = docx.Document(tmp_path)
             text = "\n".join([para.text for para in doc.paragraphs])
