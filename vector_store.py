@@ -15,8 +15,15 @@ class VectorDB:
                 api_key=config.QDRANT_API_KEY
             )
         else:
-            print(f"Connecting to local Qdrant: {config.QDRANT_HOST}:{config.QDRANT_PORT}")
-            self.client = QdrantClient(host=config.QDRANT_HOST, port=config.QDRANT_PORT)
+            try:
+                print(f"Connecting to local Qdrant: {config.QDRANT_HOST}:{config.QDRANT_PORT}")
+                self.client = QdrantClient(host=config.QDRANT_HOST, port=config.QDRANT_PORT)
+                # Test connection
+                self.client.get_collections()
+            except Exception as e:
+                print(f"Could not connect to Qdrant server: {e}")
+                print("Falling back to local file-based Qdrant storage at ./qdrant_local_storage")
+                self.client = QdrantClient(path="./qdrant_local_storage")
         
         self.encoder = SentenceTransformer(config.EMBEDDING_MODEL_NAME)
         self.collection_name = config.COLLECTION_NAME
