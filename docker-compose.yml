@@ -2,11 +2,28 @@ version: '3.8'
 
 services:
   qdrant:
-    image: qdrant/qdrant
+    image: qdrant/qdrant:latest
     container_name: qdrant_ocr_bot
     ports:
       - "6333:6333"
       - "6334:6334"
     volumes:
-      - ./qdrant_storage:/qdrant/storage:z
-    restart: always
+      - ./qdrant_storage:/qdrant/storage
+    restart: unless-stopped
+
+  streamlit:
+    build: .
+    container_name: rag_chatbot_ui
+    ports:
+      - "8501:8501"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - LLM_MODEL_NAME=${LLM_MODEL_NAME}
+    depends_on:
+      - qdrant
+    restart: unless-stopped
+    volumes:
+      - ./CRAFT_pytorch:/app/CRAFT_pytorch
+      - ./craft_mlt_25k.pth:/app/craft_mlt_25k.pth
