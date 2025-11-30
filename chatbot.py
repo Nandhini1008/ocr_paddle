@@ -22,9 +22,11 @@ class RAGChatbot:
         unique_results = []
         seen_texts = set()
         for r in results:
-            if r['text'] not in seen_texts:
+            # Normalize text for deduplication (strip whitespace)
+            clean_text = r['text'].strip()
+            if clean_text not in seen_texts:
                 unique_results.append(r)
-                seen_texts.add(r['text'])
+                seen_texts.add(clean_text)
         results = unique_results
             
         # 2. Construct context

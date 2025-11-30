@@ -107,6 +107,22 @@ with st.sidebar:
                 progress_bar.progress((i + 1) / len(uploaded_files))
             
             status_area.success("Processing complete!")
+            
+    st.markdown("---")
+    if st.button("⚠️ Reset Database"):
+        try:
+            from qdrant_client.http import models
+            # Re-create the collection (this clears all data)
+            st.session_state.vector_db.client.recreate_collection(
+                collection_name=st.session_state.vector_db.collection_name,
+                vectors_config=models.VectorParams(
+                    size=st.session_state.vector_db.encoder.get_sentence_embedding_dimension(),
+                    distance=models.Distance.COSINE
+                )
+            )
+            st.success("Database cleared! Please re-upload your documents.")
+        except Exception as e:
+            st.error(f"Error resetting database: {e}")
 
 # Main Chat Interface
 st.title("🤖 RAG Chatbot with OCR")

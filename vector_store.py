@@ -60,8 +60,12 @@ class VectorDB:
             payload = metadata.copy()
             payload['text'] = chunk
             
+            # Generate deterministic ID based on content to prevent duplicates
+            # Use UUID5 with a namespace and the chunk text
+            doc_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, chunk))
+            
             points.append(models.PointStruct(
-                id=str(uuid.uuid4()),
+                id=doc_id,
                 vector=vector,
                 payload=payload
             ))
