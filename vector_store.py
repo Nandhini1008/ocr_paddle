@@ -69,11 +69,21 @@ class VectorDB:
     def search(self, query, k=5):
         query_vector = self.embed_text(query)
         
-        search_result = self.client.search(
-            collection_name=self.collection_name,
-            query_vector=query_vector,
-            limit=k
-        )
+        try:
+            # Try the newer API first
+            search_result = self.client.search(
+                collection_name=self.collection_name,
+                query_vector=query_vector,
+                limit=k
+            )
+        except AttributeError:
+            # Fallback to older API if search method doesn't exist
+            from qdrant_client.models import SearchRequest
+            search_result = self.client.query_points(
+                collection_name=self.collection_name,
+                query=query_vector,
+                limit=k
+            ).points
         
         results = []
         for hit in search_result:
