@@ -17,6 +17,15 @@ class RAGChatbot:
         
         if not results:
             return "I couldn't find any relevant information in the uploaded documents."
+        
+        # Deduplicate results based on text content
+        unique_results = []
+        seen_texts = set()
+        for r in results:
+            if r['text'] not in seen_texts:
+                unique_results.append(r)
+                seen_texts.add(r['text'])
+        results = unique_results
             
         # 2. Construct context
         context = "\n\n".join([f"Context {i+1}:\n{r['text']}" for i, r in enumerate(results)])
