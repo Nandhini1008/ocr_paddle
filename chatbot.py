@@ -8,7 +8,20 @@ class RAGChatbot:
             raise ValueError("GEMINI_API_KEY not found in environment variables.")
             
         genai.configure(api_key=config.GEMINI_API_KEY)
-        self.model = genai.GenerativeModel(config.LLM_MODEL_NAME)
+        
+        # Configure generation settings for deterministic output
+        generation_config = genai.types.GenerationConfig(
+            temperature=0.0,      # Zero temperature for most deterministic results
+            top_p=0.95,
+            top_k=40,
+            candidate_count=1,
+            max_output_tokens=1024,
+        )
+        
+        self.model = genai.GenerativeModel(
+            model_name=config.LLM_MODEL_NAME,
+            generation_config=generation_config
+        )
         self.vector_db = vector_db if vector_db else VectorDB()
 
     def query(self, user_query):
@@ -40,6 +53,7 @@ class RAGChatbot:
         # 3. Construct Prompt
         prompt = f"""You are a helpful assistant. Answer the user's question based ONLY on the following context.
 Ignore any page headers, footers, or irrelevant metadata (like 'Laws of Cricket 2017 Code').
+Do NOT repeat the context verbatim. Synthesize the answer in your own words.
 If the answer is not in the context, say "I don't know based on the provided documents."
 
 IMPORTANT: Keep your answer concise and to the point (2-3 sentences maximum).
