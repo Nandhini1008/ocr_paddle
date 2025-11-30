@@ -50,6 +50,20 @@ class VectorDB:
         if metadata is None:
             metadata = {}
             
+        # Pre-process text to remove headers/footers
+        import re
+        lines = text.split('\n')
+        filtered_lines = []
+        for line in lines:
+            # Filter out common headers/footers based on user's feedback
+            if "Laws of Cricket 2017 Code" in line:
+                continue
+            if re.match(r'^\s*\d+\s*$', line): # Just a page number
+                continue
+            filtered_lines.append(line)
+        
+        text = '\n'.join(filtered_lines)
+
         # Simple chunking strategy: split by paragraphs or fixed size
         # For now, let's split by paragraphs (double newline)
         chunks = [c.strip() for c in text.split('\n\n') if c.strip()]
