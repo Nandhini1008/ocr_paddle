@@ -48,43 +48,65 @@ class RAGChatbot:
         results = unique_results
             
         # 2. Construct context
-        context = "\n\n".join([f"Context {i+1} (Relevance: {r['score']:.2f}):\n{r['text']}" for i, r in enumerate(results)])
+        context = "\n\n".join([r['text'] for r in results])
         
-        # 3. Construct Prompt
-        prompt = f"""You are a helpful assistant. Answer the user's question based ONLY on the following context.
-Ignore any page headers, footers, or irrelevant metadata (like 'Laws of Cricket 2017 Code').
-Do NOT repeat the context verbatim. Synthesize the answer in your own words.
-If the answer is not in the context, say "I don't know based on the provided documents."
+        # 3. Construct a MUCH more explicit prompt
+        prompt = f"""You are a knowledgeable assistant. Your task is to answer the user's question by READING and UNDERSTANDING the context below, then WRITING YOUR OWN ANSWER in clear, simple language.
 
-IMPORTANT: Keep your answer concise and to the point (2-3 sentences maximum).
+CRITICAL RULES:
+1. DO NOT copy-paste text from the context
+2. DO NOT include headers like "Laws of Cricket 2017 Code"
+3. DO NOT include page numbers or edition information
+4. REPHRASE the information in your own words
+5. Keep your answer to 2-3 sentences maximum
+6. If you cannot answer from the context, say "I don't have enough information to answer that."
 
-Context:
+Context Information:
 {context}
 
-User Question: {user_query}
+User's Question: {user_query}
 
-Answer:"""
+Your Answer (in your own words, 2-3 sentences):"""
 
         # 4. Generate Response
         try:
             response = self.model.generate_content(prompt)
-            return response.text
+            answer = response.text.strip()
+            
+            # Safety check: If the answer contains the exact header text, it's repeating
+            if "Laws of Cricket 2017 Code" in answer:
+                # Force a simpler extraction
+                print("Warning: LLM repeated header, using fallback")
+                return self._generate_fallback_response(results, user_query)
+            
+            return answer
+            
         except Exception as e:
             # Fallback for ANY error (Quota, 500, etc)
             print(f"LLM Error: {e}")
-            fallback_response = f"**I encountered an error generating the answer, but here is the relevant information I found:**\n\n"
+            return self._generate_fallback_response(results, user_query)
+    
+    def _generate_fallback_response(self, results, user_query):
+        """Generate a clean fallback response when LLM fails or repeats context"""
+        fallback_response = f"Based on the document, here's what I found:\n\n"
+        
+        for i, r in enumerate(results, 1):
+            text = r['text']
             
-            for i, r in enumerate(results, 1):
-                # Truncate text to first 2-3 sentences (approx 300 chars)
-                text = r['text']
-                # Split by sentence endings
-                sentences = text.replace('! ', '!|').replace('? ', '?|').replace('. ', '.|').split('|')
-                # Take first 2-3 sentences
-                short_text = ' '.join(sentences[:3]).strip()
-                # If still too long, truncate at 300 chars
-                if len(short_text) > 300:
-                    short_text = short_text[:297] + "..."
-                
-                fallback_response += f"**Source {i} (Score: {r['score']:.2f}):**\n{short_text}\n\n"
+            # Remove headers
+            lines = text.split('\n')
+            clean_lines = [line for line in lines if "Laws of Cricket" not in line and not line.strip().isdigit()]
+            text = ' '.join(clean_lines)
             
-            return fallback_response
+            # Split by sentence endings
+            sentences = text.replace('! ', '!|').replace('? ', '?|').replace('. ', '.|').split('|')
+            # Take first 2 sentences
+            short_text = ' '.join(sentences[:2]).strip()
+            # If still too long, truncate at 200 chars
+            if len(short_text) > 200:
+                short_text = short_text[:197] + "..."
+            
+            if short_text:
+                fallback_response += f"{short_text}\n\n"
+        
+        return fallback_response.strip()
