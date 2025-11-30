@@ -7,7 +7,17 @@ import uuid
 
 class VectorDB:
     def __init__(self):
-        self.client = QdrantClient(host=config.QDRANT_HOST, port=config.QDRANT_PORT)
+        # Use Qdrant Cloud if URL is provided, otherwise use local
+        if config.QDRANT_URL and config.QDRANT_API_KEY:
+            print(f"Connecting to Qdrant Cloud: {config.QDRANT_URL}")
+            self.client = QdrantClient(
+                url=config.QDRANT_URL,
+                api_key=config.QDRANT_API_KEY
+            )
+        else:
+            print(f"Connecting to local Qdrant: {config.QDRANT_HOST}:{config.QDRANT_PORT}")
+            self.client = QdrantClient(host=config.QDRANT_HOST, port=config.QDRANT_PORT)
+        
         self.encoder = SentenceTransformer(config.EMBEDDING_MODEL_NAME)
         self.collection_name = config.COLLECTION_NAME
         
